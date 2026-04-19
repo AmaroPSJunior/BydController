@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Geometric Balance Theme Colors */
+  --color-bg-deep: #0A0C10;
+  --color-bg-card: #14171D;
+  --color-accent-blue: #00E5FF;
+  --color-text-dim: #8E9299;
+  --color-grid-line: rgba(255, 255, 255, 0.05);
+}
+
+@layer base {
+  body {
+    @apply bg-bg-deep text-white antialiased overflow-hidden;
+    font-family: var(--font-sans);
+  }
+}
+
+@layer components {
+  .info-card {
+    @apply bg-bg-card p-6 rounded-sm border-l-3 border-accent-blue;
+  }
+  
+  .side-panel {
+    @apply px-10 py-10 border-white/5 flex flex-col justify-center gap-10 h-full;
+  }
+
+  .nav-item {
+    @apply flex flex-col items-center justify-center border-r border-white/5 text-text-dim text-xs uppercase tracking-wider transition-colors;
+  }
+
+  .nav-item-active {
+    @apply text-accent-blue bg-accent-blue/5;
+  }
+}

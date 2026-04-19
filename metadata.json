@@ -1,0 +1,6 @@
+{
+  "name": "Dolphin Light Control",
+  "description": "Controle intuitivo de iluminação para BYD Dolphin Plus. Integração robusta para central multimídia e dispositivos móveis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
