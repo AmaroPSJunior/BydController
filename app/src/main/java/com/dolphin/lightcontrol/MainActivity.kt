@@ -3,6 +3,7 @@ package com.dolphin.lightcontrol
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,21 +35,20 @@ val TextDim = Color(0xFF8E9299)
 val GridLine = Color(0x0DFFFFFF)
 
 class MainActivity : ComponentActivity() {
-    private val bydService = BYDService()
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            DolphinControlApp(bydService)
+            val viewModel: BYDViewModel = viewModel()
+            DolphinControlApp(viewModel)
         }
     }
 }
 
 @Composable
-fun DolphinControlApp(service: BYDService) {
-    var vehicleState by remember { mutableStateOf(service.getState()) }
-    var isToggling by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
+fun DolphinControlApp(viewModel: BYDViewModel) {
+    val uiState by viewModel.uiState.collectAsState()
+    val vehicleState = uiState.vehicleState
+    val isToggling = uiState.isToggling
 
     Scaffold(
         containerColor = BgDeep,
@@ -83,12 +83,7 @@ fun DolphinControlApp(service: BYDService) {
                 verticalArrangement = Arrangement.Center
             ) {
                 ControlHex(vehicleState.internalLights, isToggling) {
-                    scope.launch {
-                        isToggling = true
-                        service.toggleInternalLights()
-                        vehicleState = service.getState()
-                        isToggling = false
-                    }
+                    viewModel.toggleLights()
                 }
                 
                 Spacer(modifier = Modifier.height(60.dp))

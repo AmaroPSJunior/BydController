@@ -4,6 +4,7 @@ Este projeto foi totalmente migrado para **Kotlin Nativo** utilizando **Jetpack 
 
 ## Estrutura do Projeto:
 - **Linguagem:** Kotlin
+- **Arquitetura:** ViewModel + StateFlow (State management robusto)
 - **UI:** Jetpack Compose (Declarativa Nativa)
 - **Ferramenta de Build:** Gradle
 - **CI/CD:** GitHub Actions (Gera APK nativo automaticamente)

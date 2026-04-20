@@ -1,6 +1,0 @@
-{
-  "appId": "com.dolphin.lightcontrol",
-  "appName": "Dolphin Light Control",
-  "webDir": "dist",
-  "bundledWebRuntime": false
-}

@@ -1,13 +1,54 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <title>BYD Dolphin Light Control - Native Android</title>
+    <style>
+      body {
+        background-color: #0A0C10;
+        color: #00E5FF;
+        font-family: sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        text-align: center;
+        padding: 20px;
+      }
+      .card {
+        background: #14171D;
+        padding: 40px;
+        border-radius: 8px;
+        border-left: 4px solid #00E5FF;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      }
+      h1 { font-weight: 300; letter-spacing: 2px; }
+      p { color: #8E9299; line-height: 1.6; }
+      .badge {
+        background: #00E5FF;
+        color: #0A0C10;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-weight: bold;
+        font-size: 12px;
+        text-transform: uppercase;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div class="card">
+      <h1>BYD DOLPHIN <span style="font-weight:bold">PLUS</span></h1>
+      <div class="badge">Projeto Nativo Kotlin</div>
+      <p>
+        Este projeto foi convertido para <strong>Android Nativo (Kotlin + Jetpack Compose)</strong>.<br>
+        O preview web não reflete a interface nativa.
+      </p>
+      <p style="font-size: 14px;">
+        Para testar, exporte o projeto para o <strong>GitHub</strong> e obtenha o <strong>APK</strong> na aba <strong>Actions</strong>.
+      </p>
+    </div>
   </body>
 </html>
-
