@@ -14,6 +14,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.EvStation
+import androidx.compose.material.icons.filled.Waves
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
@@ -59,140 +65,218 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
         topBar = { Header(vehicleState) },
         bottomBar = { NavigationFooter(uiState.currentTab) { viewModel.selectTab(it) } }
     ) { padding ->
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Left Panel (Monitoring)
-            Column(
-                modifier = Modifier
-                    .width(300.dp)
-                    .fillMaxHeight()
-                    .border(end = 1.dp, color = GridLine)
-                    .padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(32.dp)
-            ) {
-                InfoCard("Bateria", "${vehicleState.batteryLevel}%", true, vehicleState.batteryLevel)
-                InfoCard("Autonomia", "${vehicleState.estimatedRange} km", false)
-                
-                Spacer(modifier = Modifier.weight(1f))
-                
-                // Door Lock Control
-                ControlSmall(
-                    label = if (vehicleState.isLocked) "TRANCADO" else "DESTRANCADO",
-                    icon = if (vehicleState.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
-                    isActive = vehicleState.isLocked,
-                    isLoading = isToggling,
-                    onClick = { viewModel.toggleLock() }
-                )
-            }
-
-            // Center Stage (Dynamic based on Tab)
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                when(uiState.currentTab) {
-                    "LUZES" -> {
-                        ControlHex(vehicleState.internalLights, isToggling) {
-                            viewModel.toggleLights()
-                        }
-                    }
-                    "CLIMA" -> {
-                        Text("CONTROLES DE CLIMA", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        Text("O painel lateral direito controla o AC", color = TextDim, fontSize = 14.sp)
-                    }
-                    "HOME" -> {
-                        Icon(Icons.Default.DirectionsCar, null, tint = AccentBlue, modifier = Modifier.size(120.dp))
-                        Text(vehicleState.carName, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Light)
-                    }
-                    else -> {
-                        Text(uiState.currentTab, color = Color.White, fontSize = 24.sp)
-                        Text("Funcionalidade em desenvolvimento", color = TextDim, fontSize = 14.sp)
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(40.dp))
-                
-                Text(
-                    "BYD SMART CONNECT",
-                    color = TextDim,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 4.sp
-                )
-            }
-
-            // Right Panel (Climate & Control)
-            Column(
-                modifier = Modifier
-                    .width(300.dp)
-                    .fillMaxHeight()
-                    .border(start = 1.dp, color = GridLine)
-                    .padding(vertical = 32.dp, horizontal = 40.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                // Vertical Temp Slider
-                Box(
-                    modifier = Modifier
-                        .width(40.dp)
-                        .weight(1f)
-                        .clip(RoundedCornerShape(100.dp))
-                        .background(Color(0xFF1A1D23))
-                        .pointerInput(Unit) {
-                            detectTapGestures { offset ->
-                                val percent = 1f - (offset.y / size.height)
-                                val newTemp = (16 + (percent * 12)).toInt().coerceIn(16, 28)
-                                viewModel.updateTemp(newTemp)
-                            }
-                        }
-                        .padding(vertical = 2.dp),
-                    contentAlignment = Alignment.BottomCenter
-                ) {
-                    // Fill based on temp (Example: 16-28 range)
-                    val fillPercent = (vehicleState.targetTemperature - 16) / 12f
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight(fillPercent.coerceIn(0f, 1f))
-                            .clip(RoundedCornerShape(100.dp))
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(AccentBlue, Color(0xFF00B8D4))
-                                )
-                            )
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(32.dp))
-                
-                // AC Button (Small Hex/Circle)
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(if(vehicleState.airConditioningOn) AccentBlue.copy(alpha = 0.1f) else BgCard)
-                        .border(2.dp, if(vehicleState.airConditioningOn) AccentBlue else GridLine, CircleShape)
-                        .clickable { viewModel.toggleAC() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.AcUnit, 
-                        null, 
-                        tint = if(vehicleState.airConditioningOn) AccentBlue else TextDim,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("${vehicleState.targetTemperature}°C", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            when (uiState.currentTab) {
+                "HOME" -> HomeScreen(vehicleState, isToggling, viewModel)
+                "LUZES" -> LightsScreen(vehicleState, isToggling, viewModel)
+                "CLIMA" -> ClimateScreen(vehicleState, isToggling, viewModel)
+                "ENERGIA" -> EnergyScreen(vehicleState)
+                "AJUSTES" -> SettingsScreen()
             }
         }
+    }
+}
+
+@Composable
+fun HomeScreen(state: VehicleState, isToggling: Boolean, viewModel: BYDViewModel) {
+    Row(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.width(300.dp).fillMaxHeight().border(end = 1.dp, color = GridLine).padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(32.dp)
+        ) {
+            InfoCard("Bateria", "${state.batteryLevel}%", true, state.batteryLevel)
+            InfoCard("Autonomia", "${state.estimatedRange} km", false)
+        }
+        
+        Column(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(Icons.Default.DirectionsCar, null, tint = AccentBlue, modifier = Modifier.size(200.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(state.carName, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Light)
+            Text("By BYD Automotive", color = TextDim, fontSize = 12.sp)
+        }
+
+        Column(
+            modifier = Modifier.width(350.dp).fillMaxHeight().border(start = 1.dp, color = GridLine).padding(32.dp),
+            verticalArrangement = Arrangement.Center
+        ) {
+            ControlSmall(
+                label = if (state.isLocked) "VEÍCULO TRANCADO" else "VEÍCULO ABERTO",
+                icon = if (state.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                isActive = state.isLocked,
+                isLoading = isToggling,
+                onClick = { viewModel.toggleLock() }
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text("Segurança e Trava Automática Ativos", color = TextDim, fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+fun LightsScreen(state: VehicleState, isToggling: Boolean, viewModel: BYDViewModel) {
+    Row(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.width(300.dp).fillMaxHeight().border(end = 1.dp, color = GridLine).padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Text("ZONAS DE ILUMINAÇÃO", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            LightZoneItem("Interior Frontal", true)
+            LightZoneItem("Interior Traseiro", false)
+            LightZoneItem("Porta-malas", false)
+            LightZoneItem("Luz de Leitura", false)
+        }
+
+        Column(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            ControlHex(state.internalLights, isToggling) { viewModel.toggleLights() }
+            Spacer(modifier = Modifier.height(32.dp))
+            Text("MASTER SWITCH", color = AccentBlue, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+        }
+
+        Column(
+            modifier = Modifier.width(300.dp).fillMaxHeight().border(start = 1.dp, color = GridLine).padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Text("ILUMINAÇÃO EXTERNA", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            ControlSmall("Faróis Automáticos", Icons.Default.LightMode, true, false) {}
+            ControlSmall("Lanterna Traseira", Icons.Default.LightMode, false, false) {}
+        }
+    }
+}
+
+@Composable
+fun LightZoneItem(label: String, isOn: Boolean) {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(8.dp))
+            .background(if(isOn) AccentBlue.copy(alpha = 0.1f) else BgCard).padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(label, color = if(isOn) Color.White else TextDim, fontSize = 13.sp)
+        Switch(checked = isOn, onCheckedChange = {}, colors = SwitchDefaults.colors(checkedThumbColor = AccentBlue))
+    }
+}
+
+@Composable
+fun ClimateScreen(state: VehicleState, isToggling: Boolean, viewModel: BYDViewModel) {
+    Row(modifier = Modifier.fillMaxSize()) {
+        // Left: Fan Speed
+        Column(
+            modifier = Modifier.width(300.dp).fillMaxHeight().border(end = 1.dp, color = GridLine).padding(32.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Text("VELOCIDADE DO VENTILADOR", color = TextDim, fontSize = 11.sp)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(1, 2, 3, 4, 5).forEach { speed ->
+                    Box(
+                        modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(4.dp))
+                            .background(if(speed <= 3) AccentBlue else Color(0xFF1A1D23)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("$speed", color = if(speed <= 3) BgDeep else TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(20.dp))
+            ControlSmall("Recirculação", Icons.Default.Autorenew, true, false) {}
+            ControlSmall("Desembaçador", Icons.Default.Waves, false, false) {}
+        }
+
+        // Center: Large Temp
+        Column(
+            modifier = Modifier.weight(1f).fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("TEMPERATURA INTERNA", color = TextDim, fontSize = 12.sp, letterSpacing = 2.sp)
+            Text("${state.targetTemperature}°C", color = Color.White, fontSize = 120.sp, fontWeight = FontWeight.ExtraLight)
+            Row(horizontalArrangement = Arrangement.spacedBy(40.dp)) {
+                IconButton(onClick = { viewModel.updateTemp(state.targetTemperature - 1) }, modifier = Modifier.size(64.dp).background(BgCard, CircleShape).border(1.dp, GridLine, CircleShape)) {
+                    Icon(Icons.Default.Remove, null, tint = Color.White, modifier = Modifier.size(32.dp))
+                }
+                IconButton(onClick = { viewModel.updateTemp(state.targetTemperature + 1) }, modifier = Modifier.size(64.dp).background(BgCard, CircleShape).border(1.dp, GridLine, CircleShape)) {
+                    Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(32.dp))
+                }
+            }
+        }
+
+        // Right: Temp Slider & AC
+        Column(
+            modifier = Modifier.width(300.dp).fillMaxHeight().border(start = 1.dp, color = GridLine).padding(40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier.width(40.dp).weight(1f).clip(RoundedCornerShape(100.dp)).background(Color(0xFF1A1D23))
+                    .pointerInput(Unit) { detectTapGestures { offset ->
+                        val percent = 1f - (offset.y / size.height)
+                        val newTemp = (16 + (percent * 12)).toInt().coerceIn(16, 28)
+                        viewModel.updateTemp(newTemp)
+                    } }.padding(vertical = 2.dp),
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                val fillPercent = (state.targetTemperature - 16) / 12f
+                Box(modifier = Modifier.fillMaxWidth().fillMaxHeight(fillPercent.coerceIn(0f, 1f)).clip(RoundedCornerShape(100.dp)).background(Brush.verticalGradient(listOf(AccentBlue, Color(0xFF00B8D4)))))
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+            Box(
+                modifier = Modifier.size(80.dp).clip(CircleShape).background(if(state.airConditioningOn) AccentBlue.copy(alpha = 0.1f) else BgCard).border(2.dp, if(state.airConditioningOn) AccentBlue else GridLine, CircleShape).clickable { viewModel.toggleAC() },
+                contentAlignment = Alignment.Center
+            ) { Icon(Icons.Default.AcUnit, null, tint = if(state.airConditioningOn) AccentBlue else TextDim, modifier = Modifier.size(32.dp)) }
+        }
+    }
+}
+
+@Composable
+fun EnergyScreen(state: VehicleState) {
+    Column(modifier = Modifier.fillMaxSize().padding(40.dp)) {
+        Text("FLUXO DE ENERGIA", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(40.dp))
+        Row(modifier = Modifier.fillMaxWidth().weight(1f), horizontalArrangement = Arrangement.spacedBy(40.dp)) {
+            // Simulated Graph
+            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(BgCard).border(1.dp, GridLine)) {
+                // Background Grid
+                Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
+                    repeat(5) { Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(GridLine)) }
+                }
+                Text("Gráfico de Consumo (Últimos 50km)", modifier = Modifier.align(Alignment.Center), color = TextDim)
+            }
+            Column(modifier = Modifier.width(300.dp), verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                InfoCard("Consumo Médio", "15.4 kWh/100km")
+                InfoCard("Energia Recuperada", "2.1 kWh")
+                InfoCard("Saúde da Bateria", "98%")
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsScreen() {
+    Column(modifier = Modifier.fillMaxSize().padding(40.dp)) {
+        Text("CONFIGURAÇÕES DO SISTEMA", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(24.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            SettingsItem("Usuário", "Arcamos J")
+            SettingsItem("Conectividade", "4G LTE - 5/5")
+            SettingsItem("Atualização de Software", "v2.4.1 (Atualizado)")
+            SettingsItem("Modo de Exibição", "Escuro (OLED)")
+            SettingsItem("Idioma", "Português (BR)")
+        }
+    }
+}
+
+@Composable
+fun SettingsItem(label: String, value: String) {
+    Row(modifier = Modifier.fillMaxWidth().height(72.dp).background(BgCard).padding(24.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = Color.White, fontSize = 16.sp)
+        Text(value, color = AccentBlue, fontSize = 16.sp)
     }
 }
 
