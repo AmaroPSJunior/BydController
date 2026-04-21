@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -55,7 +57,7 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
     Scaffold(
         containerColor = BgDeep,
         topBar = { Header(vehicleState) },
-        bottomBar = { NavigationFooter() }
+        bottomBar = { NavigationFooter(uiState.currentTab) { viewModel.selectTab(it) } }
     ) { padding ->
         Row(
             modifier = Modifier
@@ -86,7 +88,7 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
                 )
             }
 
-            // Center Stage (Lights)
+            // Center Stage (Dynamic based on Tab)
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -94,8 +96,24 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                ControlHex(vehicleState.internalLights, isToggling) {
-                    viewModel.toggleLights()
+                when(uiState.currentTab) {
+                    "LUZES" -> {
+                        ControlHex(vehicleState.internalLights, isToggling) {
+                            viewModel.toggleLights()
+                        }
+                    }
+                    "CLIMA" -> {
+                        Text("CONTROLES DE CLIMA", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                        Text("O painel lateral direito controla o AC", color = TextDim, fontSize = 14.sp)
+                    }
+                    "HOME" -> {
+                        Icon(Icons.Default.DirectionsCar, null, tint = AccentBlue, modifier = Modifier.size(120.dp))
+                        Text(vehicleState.carName, color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Light)
+                    }
+                    else -> {
+                        Text(uiState.currentTab, color = Color.White, fontSize = 24.sp)
+                        Text("Funcionalidade em desenvolvimento", color = TextDim, fontSize = 14.sp)
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(40.dp))
@@ -109,43 +127,70 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
                 )
             }
 
-            // Right Panel (Climate)
+            // Right Panel (Climate & Control)
             Column(
                 modifier = Modifier
                     .width(300.dp)
                     .fillMaxHeight()
                     .border(start = 1.dp, color = GridLine)
-                    .padding(32.dp),
-                verticalArrangement = Arrangement.spacedBy(32.dp)
+                    .padding(vertical = 32.dp, horizontal = 40.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                InfoCard("Climatização", if(vehicleState.airConditioningOn) "LIGADO" else "DESLIGADO", false)
-                
-                // AC Toggle
-                ControlSmall(
-                    label = "AR CONDICIONADO",
-                    icon = Icons.Default.AcUnit,
-                    isActive = vehicleState.airConditioningOn,
-                    isLoading = isToggling,
-                    onClick = { viewModel.toggleAC() }
-                )
-
-                // Temp Control
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text("TEMPERATURA ALVO", color = TextDim, fontSize = 11.sp)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { if(vehicleState.targetTemperature > 16) viewModel.updateTemp(vehicleState.targetTemperature - 1) }) {
-                            Icon(Icons.Default.Remove, "Less", tint = Color.White)
+                // Vertical Temp Slider
+                Box(
+                    modifier = Modifier
+                        .width(40.dp)
+                        .weight(1f)
+                        .clip(RoundedCornerShape(100.dp))
+                        .background(Color(0xFF1A1D23))
+                        .pointerInput(Unit) {
+                            detectTapGestures { offset ->
+                                val percent = 1f - (offset.y / size.height)
+                                val newTemp = (16 + (percent * 12)).toInt().coerceIn(16, 28)
+                                viewModel.updateTemp(newTemp)
+                            }
                         }
-                        Text("${vehicleState.targetTemperature}°C", color = Color.White, fontSize = 32.sp)
-                        IconButton(onClick = { if(vehicleState.targetTemperature < 28) viewModel.updateTemp(vehicleState.targetTemperature + 1) }) {
-                            Icon(Icons.Default.Add, "More", tint = Color.White)
-                        }
-                    }
+                        .padding(vertical = 2.dp),
+                    contentAlignment = Alignment.BottomCenter
+                ) {
+                    // Fill based on temp (Example: 16-28 range)
+                    val fillPercent = (vehicleState.targetTemperature - 16) / 12f
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .fillMaxHeight(fillPercent.coerceIn(0f, 1f))
+                            .clip(RoundedCornerShape(100.dp))
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(AccentBlue, Color(0xFF00B8D4))
+                                )
+                            )
+                    )
                 }
+                
+                Spacer(modifier = Modifier.height(32.dp))
+                
+                // AC Button (Small Hex/Circle)
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(if(vehicleState.airConditioningOn) AccentBlue.copy(alpha = 0.1f) else BgCard)
+                        .border(2.dp, if(vehicleState.airConditioningOn) AccentBlue else GridLine, CircleShape)
+                        .clickable { viewModel.toggleAC() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.AcUnit, 
+                        null, 
+                        tint = if(vehicleState.airConditioningOn) AccentBlue else TextDim,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("${vehicleState.targetTemperature}°C", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -195,7 +240,7 @@ fun Header(state: VehicleState) {
         )
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             StatusText("22:15")
-            StatusText("24°C")
+            StatusText("${state.targetTemperature}°C")
             StatusText("● API CONNECTED", AccentBlue)
         }
     }
@@ -303,7 +348,7 @@ fun ControlHex(isOn: Boolean, isLoading: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun NavigationFooter() {
+fun NavigationFooter(currentTab: String, onTabSelect: (String) -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -311,28 +356,34 @@ fun NavigationFooter() {
             .background(BgCard)
             .border(top = 1.dp, color = GridLine)
     ) {
-        NavItem("⌂", "Home", false)
-        NavItem("☼", "Luzes", true)
-        NavItem("♨", "Clima", false)
-        NavItem("◓", "Energia", false)
-        NavItem("⚙", "Ajustes", false)
+        NavItem(Icons.Default.Home, "Home", currentTab == "HOME") { onTabSelect("HOME") }
+        NavItem(Icons.Default.WbSunny, "Luzes", currentTab == "LUZES") { onTabSelect("LUZES") }
+        NavItem(Icons.Default.Thermostat, "Clima", currentTab == "CLIMA") { onTabSelect("CLIMA") }
+        NavItem(Icons.Default.EvStation, "Energia", currentTab == "ENERGIA") { onTabSelect("ENERGIA") }
+        NavItem(Icons.Default.Settings, "Ajustes", currentTab == "AJUSTES") { onTabSelect("AJUSTES") }
     }
 }
 
 @Composable
-fun RowScope.NavItem(icon: String, label: String, isActive: Boolean) {
+fun RowScope.NavItem(icon: ImageVector, label: String, isActive: Boolean, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
             .background(if (isActive) AccentBlue.copy(alpha = 0.05f) else Color.Transparent)
+            .clickable { onClick() }
             .border(end = 1.dp, color = GridLine),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(icon, fontSize = 24.sp, color = if (isActive) AccentBlue else TextDim)
+        Icon(
+            icon, 
+            contentDescription = label,
+            modifier = Modifier.size(24.dp),
+            tint = if (isActive) AccentBlue else TextDim
+        )
         Spacer(modifier = Modifier.height(8.dp))
-        Text(label.uppercase(), fontSize = 12.sp, color = if (isActive) AccentBlue else TextDim)
+        Text(label.uppercase(), fontSize = 11.sp, color = if (isActive) AccentBlue else TextDim, fontWeight = FontWeight.Bold)
     }
 }
 

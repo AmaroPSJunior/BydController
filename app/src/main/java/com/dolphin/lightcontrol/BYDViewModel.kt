@@ -39,6 +39,10 @@ class BYDViewModel : ViewModel() {
         performAction { service.setTemperature(temp) }
     }
 
+    fun selectTab(tab: String) {
+        _uiState.update { it.copy(currentTab = tab) }
+    }
+
     private fun performAction(action: suspend () -> Unit) {
         if (_uiState.value.isToggling) return
         viewModelScope.launch {
@@ -57,5 +61,6 @@ class BYDViewModel : ViewModel() {
 
 data class VehicleUIState(
     val vehicleState: VehicleState = VehicleState(),
-    val isToggling: Boolean = false
+    val isToggling: Boolean = false,
+    val currentTab: String = "LUZES"
 )
