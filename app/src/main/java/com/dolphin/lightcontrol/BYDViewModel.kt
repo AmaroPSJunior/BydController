@@ -32,7 +32,7 @@ class BYDViewModel : ViewModel() {
     }
 
     fun toggleAC() {
-        performAction { service.toggleAirConditioning() }
+        performAction { service.toggleAC() }
     }
 
     fun updateTemp(temp: Int) {

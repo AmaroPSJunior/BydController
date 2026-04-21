@@ -269,14 +269,14 @@ fun SettingsScreen(state: VehicleState, viewModel: BYDViewModel) {
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             // Devices & Bluetooth
-            Column(modifier = Modifier.weight(1f).verticalArrangement(Arrangement.spacedBy(12.dp))) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("DISPOSITIVOS & CONEXÃO", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 SettingsItem("Bluetooth", state.bluetoothDevice ?: "Desconectado") { showBluetoothDialog = true }
                 SettingsItem("Visualizar Dispositivos Pareados", "Total: ${state.pairedDevices.size}") {}
             }
 
             // Vehicle Fleet
-            Column(modifier = Modifier.weight(1f).verticalArrangement(Arrangement.spacedBy(12.dp))) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("GERENCIAR FROTA", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 SettingsItem("Veículo Atual", state.carName) {}
                 SettingsItem("Adicionar Novo Veículo", "Native Registration") { showVehicleDialog = true }
