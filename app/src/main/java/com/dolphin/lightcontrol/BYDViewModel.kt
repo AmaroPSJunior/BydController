@@ -24,15 +24,30 @@ class BYDViewModel : ViewModel() {
     }
 
     fun toggleLights() {
+        performAction { service.toggleInternalLights() }
+    }
+
+    fun toggleLock() {
+        performAction { service.toggleLock() }
+    }
+
+    fun toggleAC() {
+        performAction { service.toggleAirConditioning() }
+    }
+
+    fun updateTemp(temp: Int) {
+        performAction { service.setTemperature(temp) }
+    }
+
+    private fun performAction(action: suspend () -> Unit) {
         if (_uiState.value.isToggling) return
-        
         viewModelScope.launch {
             _uiState.update { it.copy(isToggling = true) }
             try {
-                service.toggleInternalLights()
+                action()
                 refreshState()
             } catch (e: Exception) {
-                // Tratar erro
+                // Notificar erro UI
             } finally {
                 _uiState.update { it.copy(isToggling = false) }
             }

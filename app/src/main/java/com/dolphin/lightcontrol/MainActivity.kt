@@ -62,21 +62,31 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Left Panel
+            // Left Panel (Monitoring)
             Column(
                 modifier = Modifier
-                    .width(320.dp)
+                    .width(300.dp)
                     .fillMaxHeight()
-                    .border(1.dp, GridLine, RoundedCornerShape(0.dp))
-                    .padding(40.dp),
-                verticalArrangement = Arrangement.Center
+                    .border(end = 1.dp, color = GridLine)
+                    .padding(32.dp),
+                verticalArrangement = Arrangement.spacedBy(32.dp)
             ) {
-                InfoCard("Bateria do Veículo", "${vehicleState.batteryLevel}%", true, vehicleState.batteryLevel)
-                Spacer(modifier = Modifier.height(40.dp))
-                InfoCard("Autonomia Estimada", "358 km", false)
+                InfoCard("Bateria", "${vehicleState.batteryLevel}%", true, vehicleState.batteryLevel)
+                InfoCard("Autonomia", "${vehicleState.estimatedRange} km", false)
+                
+                Spacer(modifier = Modifier.weight(1f))
+                
+                // Door Lock Control
+                ControlSmall(
+                    label = if (vehicleState.isLocked) "TRANCADO" else "DESTRANCADO",
+                    icon = if (vehicleState.isLocked) Icons.Default.Lock else Icons.Default.LockOpen,
+                    isActive = vehicleState.isLocked,
+                    isLoading = isToggling,
+                    onClick = { viewModel.toggleLock() }
+                )
             }
 
-            // Center Stage
+            // Center Stage (Lights)
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -88,31 +98,79 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
                     viewModel.toggleLights()
                 }
                 
-                Spacer(modifier = Modifier.height(60.dp))
+                Spacer(modifier = Modifier.height(40.dp))
                 
-                // Car Outline Placeholder
                 Text(
-                    "Controle Nativo de Iluminação",
+                    "BYD SMART CONNECT",
                     color = TextDim,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 2.sp
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 4.sp
                 )
             }
 
-            // Right Panel
+            // Right Panel (Climate)
             Column(
                 modifier = Modifier
-                    .width(320.dp)
+                    .width(300.dp)
                     .fillMaxHeight()
-                    .border(1.dp, GridLine, RoundedCornerShape(0.dp))
-                    .padding(40.dp),
-                verticalArrangement = Arrangement.Center
+                    .border(start = 1.dp, color = GridLine)
+                    .padding(32.dp),
+                verticalArrangement = Arrangement.spacedBy(32.dp)
             ) {
-                InfoCard("Consumo de API", "BYD.CAN.BodyControl", false)
-                Spacer(modifier = Modifier.height(40.dp))
-                InfoCard("Modo de Condução", "Sport+", false)
+                InfoCard("Climatização", if(vehicleState.airConditioningOn) "LIGADO" else "DESLIGADO", false)
+                
+                // AC Toggle
+                ControlSmall(
+                    label = "AR CONDICIONADO",
+                    icon = Icons.Default.AcUnit,
+                    isActive = vehicleState.airConditioningOn,
+                    isLoading = isToggling,
+                    onClick = { viewModel.toggleAC() }
+                )
+
+                // Temp Control
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text("TEMPERATURA ALVO", color = TextDim, fontSize = 11.sp)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { if(vehicleState.targetTemperature > 16) viewModel.updateTemp(vehicleState.targetTemperature - 1) }) {
+                            Icon(Icons.Default.Remove, "Less", tint = Color.White)
+                        }
+                        Text("${vehicleState.targetTemperature}°C", color = Color.White, fontSize = 32.sp)
+                        IconButton(onClick = { if(vehicleState.targetTemperature < 28) viewModel.updateTemp(vehicleState.targetTemperature + 1) }) {
+                            Icon(Icons.Default.Add, "More", tint = Color.White)
+                        }
+                    }
+                }
             }
+        }
+    }
+}
+
+@Composable
+fun ControlSmall(label: String, icon: ImageVector, isActive: Boolean, isLoading: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(80.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (isActive) AccentBlue.copy(alpha = 0.15f) else BgCard)
+            .border(1.dp, if (isActive) AccentBlue else GridLine, RoundedCornerShape(12.dp))
+            .clickable(enabled = !isLoading) { onClick() }
+            .padding(16.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = if (isActive) AccentBlue else TextDim, modifier = Modifier.size(24.dp))
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(label.uppercase(), color = if (isActive) Color.White else TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
+        if (isLoading) {
+            CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterEnd).size(20.dp), color = AccentBlue, strokeWidth = 2.dp)
         }
     }
 }
