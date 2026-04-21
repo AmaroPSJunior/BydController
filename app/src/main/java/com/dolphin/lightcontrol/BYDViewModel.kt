@@ -39,6 +39,38 @@ class BYDViewModel : ViewModel() {
         performAction { service.setTemperature(temp) }
     }
 
+    fun updateLightZone(zone: String, value: Boolean) {
+        performAction { service.updateLightZone(zone, value) }
+    }
+
+    fun setFanSpeed(speed: Int) {
+        performAction { service.setFanSpeed(speed) }
+    }
+
+    fun toggleRecirculation() {
+        performAction { service.toggleRecirculation() }
+    }
+
+    fun toggleDefrost() {
+        performAction { service.toggleDefrost() }
+    }
+
+    fun toggleAutoHeadlights() {
+        performAction { service.toggleAutoHeadlights() }
+    }
+
+    fun toggleRearFog() {
+        performAction { service.toggleRearFog() }
+    }
+
+    fun pairBluetooth(device: String) {
+        performAction { service.connectBluetooth(device) }
+    }
+
+    fun addNewVehicle(name: String) {
+        performAction { service.registerVehicle(name) }
+    }
+
     fun selectTab(tab: String) {
         _uiState.update { it.copy(currentTab = tab) }
     }

@@ -71,7 +71,7 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
                 "LUZES" -> LightsScreen(vehicleState, isToggling, viewModel)
                 "CLIMA" -> ClimateScreen(vehicleState, isToggling, viewModel)
                 "ENERGIA" -> EnergyScreen(vehicleState)
-                "AJUSTES" -> SettingsScreen()
+                "AJUSTES" -> SettingsScreen(vehicleState, viewModel)
             }
         }
     }
@@ -124,10 +124,10 @@ fun LightsScreen(state: VehicleState, isToggling: Boolean, viewModel: BYDViewMod
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Text("ZONAS DE ILUMINAÇÃO", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            LightZoneItem("Interior Frontal", true)
-            LightZoneItem("Interior Traseiro", false)
-            LightZoneItem("Porta-malas", false)
-            LightZoneItem("Luz de Leitura", false)
+            LightZoneItem("Interior Frontal", state.frontLights) { viewModel.updateLightZone("front", it) }
+            LightZoneItem("Interior Traseiro", state.rearLightsZone) { viewModel.updateLightZone("rear", it) }
+            LightZoneItem("Porta-malas", state.trunkLights) { viewModel.updateLightZone("trunk", it) }
+            LightZoneItem("Luz de Leitura", state.readingLights) { viewModel.updateLightZone("reading", it) }
         }
 
         Column(
@@ -137,7 +137,7 @@ fun LightsScreen(state: VehicleState, isToggling: Boolean, viewModel: BYDViewMod
         ) {
             ControlHex(state.internalLights, isToggling) { viewModel.toggleLights() }
             Spacer(modifier = Modifier.height(32.dp))
-            Text("MASTER SWITCH", color = AccentBlue, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
+            Text("MASTER SWITCH", color = if(state.internalLights) AccentBlue else TextDim, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 4.sp)
         }
 
         Column(
@@ -145,14 +145,14 @@ fun LightsScreen(state: VehicleState, isToggling: Boolean, viewModel: BYDViewMod
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             Text("ILUMINAÇÃO EXTERNA", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            ControlSmall("Faróis Automáticos", Icons.Default.LightMode, true, false) {}
-            ControlSmall("Lanterna Traseira", Icons.Default.LightMode, false, false) {}
+            ControlSmall("Faróis Automáticos", Icons.Default.LightMode, state.autoHeadlightsOn, isToggling) { viewModel.toggleAutoHeadlights() }
+            ControlSmall("Lanterna de Neblina", Icons.Default.Cloud, state.rearFogOn, isToggling) { viewModel.toggleRearFog() }
         }
     }
 }
 
 @Composable
-fun LightZoneItem(label: String, isOn: Boolean) {
+fun LightZoneItem(label: String, isOn: Boolean, onToggle: (Boolean) -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(8.dp))
             .background(if(isOn) AccentBlue.copy(alpha = 0.1f) else BgCard).padding(horizontal = 16.dp),
@@ -160,7 +160,7 @@ fun LightZoneItem(label: String, isOn: Boolean) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(label, color = if(isOn) Color.White else TextDim, fontSize = 13.sp)
-        Switch(checked = isOn, onCheckedChange = {}, colors = SwitchDefaults.colors(checkedThumbColor = AccentBlue))
+        Switch(checked = isOn, onCheckedChange = { onToggle(it) }, colors = SwitchDefaults.colors(checkedThumbColor = AccentBlue))
     }
 }
 
@@ -177,16 +177,17 @@ fun ClimateScreen(state: VehicleState, isToggling: Boolean, viewModel: BYDViewMo
                 listOf(1, 2, 3, 4, 5).forEach { speed ->
                     Box(
                         modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(4.dp))
-                            .background(if(speed <= 3) AccentBlue else Color(0xFF1A1D23)),
+                            .background(if(speed <= state.fanSpeed) AccentBlue else Color(0xFF1A1D23))
+                            .clickable { viewModel.setFanSpeed(speed) },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("$speed", color = if(speed <= 3) BgDeep else TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("$speed", color = if(speed <= state.fanSpeed) BgDeep else TextDim, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
             Spacer(modifier = Modifier.height(20.dp))
-            ControlSmall("Recirculação", Icons.Default.Autorenew, true, false) {}
-            ControlSmall("Desembaçador", Icons.Default.Waves, false, false) {}
+            ControlSmall("Recirculação", Icons.Default.Autorenew, state.recirculation, isToggling) { viewModel.toggleRecirculation() }
+            ControlSmall("Desembaçador", Icons.Default.Waves, state.defrost, isToggling) { viewModel.toggleDefrost() }
         }
 
         // Center: Large Temp
@@ -258,23 +259,95 @@ fun EnergyScreen(state: VehicleState) {
 }
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(state: VehicleState, viewModel: BYDViewModel) {
+    var showBluetoothDialog by remember { mutableStateOf(false) }
+    var showVehicleDialog by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.fillMaxSize().padding(40.dp)) {
         Text("CONFIGURAÇÕES DO SISTEMA", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(24.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            SettingsItem("Usuário", "Arcamos J")
-            SettingsItem("Conectividade", "4G LTE - 5/5")
-            SettingsItem("Atualização de Software", "v2.4.1 (Atualizado)")
-            SettingsItem("Modo de Exibição", "Escuro (OLED)")
-            SettingsItem("Idioma", "Português (BR)")
+        
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            // Devices & Bluetooth
+            Column(modifier = Modifier.weight(1f).verticalArrangement(Arrangement.spacedBy(12.dp))) {
+                Text("DISPOSITIVOS & CONEXÃO", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                SettingsItem("Bluetooth", state.bluetoothDevice ?: "Desconectado") { showBluetoothDialog = true }
+                SettingsItem("Visualizar Dispositivos Pareados", "Total: ${state.pairedDevices.size}") {}
+            }
+
+            // Vehicle Fleet
+            Column(modifier = Modifier.weight(1f).verticalArrangement(Arrangement.spacedBy(12.dp))) {
+                Text("GERENCIAR FROTA", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                SettingsItem("Veículo Atual", state.carName) {}
+                SettingsItem("Adicionar Novo Veículo", "Native Registration") { showVehicleDialog = true }
+            }
         }
+
+        Spacer(modifier = Modifier.height(40.dp))
+        Text("SISTEMA", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(12.dp))
+        SettingsItem("Software", "v2.4.1 (Stable Build)") {}
+    }
+
+    if (showBluetoothDialog) {
+        AlertDialog(
+            onDismissRequest = { showBluetoothDialog = false },
+            containerColor = BgCard,
+            title = { Text("Conectar Bluetooth", color = Color.White) },
+            text = {
+                Column {
+                    state.pairedDevices.forEach { device ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable { 
+                                viewModel.pairBluetooth(device)
+                                showBluetoothDialog = false
+                            }.padding(vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(device, color = if(state.bluetoothDevice == device) AccentBlue else Color.White)
+                            if(state.bluetoothDevice == device) Icon(Icons.Default.Check, null, tint = AccentBlue)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showBluetoothDialog = false }) { Text("CANCELAR", color = AccentBlue) } }
+        )
+    }
+
+    if (showVehicleDialog) {
+        var newVehicleName by remember { mutableStateOf("") }
+        AlertDialog(
+            onDismissRequest = { showVehicleDialog = false },
+            containerColor = BgCard,
+            title = { Text("Cadastrar Novo Veículo", color = Color.White) },
+            text = {
+                OutlinedTextField(
+                    value = newVehicleName,
+                    onValueChange = { newVehicleName = it },
+                    label = { Text("Nome do Veículo") },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = AccentBlue,
+                        unfocusedBorderColor = GridLine
+                    )
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if(newVehicleName.isNotBlank()) {
+                        viewModel.addNewVehicle(newVehicleName)
+                        showVehicleDialog = false
+                    }
+                }) { Text("CADASTRAR", color = AccentBlue) }
+            }
+        )
     }
 }
 
 @Composable
-fun SettingsItem(label: String, value: String) {
-    Row(modifier = Modifier.fillMaxWidth().height(72.dp).background(BgCard).padding(24.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+fun SettingsItem(label: String, value: String, onClick: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().height(72.dp).background(BgCard).clickable { onClick() }.padding(24.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = Color.White, fontSize = 16.sp)
         Text(value, color = AccentBlue, fontSize = 16.sp)
     }
