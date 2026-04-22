@@ -353,7 +353,7 @@ fun SettingsScreen(state: VehicleState, discoveredDevices: List<BluetoothDeviceI
                             }
                             if(state.bluetoothDevice == device.name) Icon(Icons.Default.Check, null, tint = AccentBlue)
                         }
-                        HorizontalDivider(color = GridLine)
+                        Divider(color = GridLine)
                     }
                 }
             },
