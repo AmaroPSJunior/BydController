@@ -23,7 +23,8 @@ data class VehicleState(
     val carName: String = "BYD Dolphin Plus",
     val bluetoothDevice: String? = "iPhone de Arcamos",
     val pairedDevices: List<String> = listOf("iPhone de Arcamos", "Samsung S23", "Central BYD"),
-    val registeredVehicles: List<String> = listOf("BYD Dolphin Plus", "BYD Seal")
+    val registeredVehicles: List<String> = listOf("BYD Dolphin Plus", "BYD Seal"),
+    val cloudSyncStatus: String? = null
 )
 
 class BYDService {
@@ -99,6 +100,10 @@ class BYDService {
     suspend fun registerVehicle(name: String) {
         kotlinx.coroutines.delay(1000)
         state = state.copy(registeredVehicles = state.registeredVehicles + name)
+    }
+
+    suspend fun updateCloudSyncStatus(status: String?) {
+        state = state.copy(cloudSyncStatus = status)
     }
 
     fun getState(): VehicleState = state

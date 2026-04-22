@@ -101,6 +101,30 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(currentTab = tab) }
     }
 
+    fun syncWithCloud() {
+        val apiKey = System.getenv("GEMINI_API_KEY") ?: ""
+        if (apiKey.isBlank()) {
+            _uiState.update { it.copy(vehicleState = it.vehicleState.copy(cloudSyncStatus = "Error: API Key Missing")) }
+            return
+        }
+
+        val cloudSyncService = CloudSyncService(apiKey)
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isSyncing = true) }
+            try {
+                val result = cloudSyncService.syncVehicleData(_uiState.value.vehicleState)
+                service.updateCloudSyncStatus(result)
+                refreshState()
+            } catch (e: Exception) {
+                service.updateCloudSyncStatus("Error: ${e.message}")
+                refreshState()
+            } finally {
+                _uiState.update { it.copy(isSyncing = false) }
+            }
+        }
+    }
+
     private fun performAction(action: suspend () -> Unit) {
         if (_uiState.value.isToggling) return
         viewModelScope.launch {
@@ -120,5 +144,6 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
 data class VehicleUIState(
     val vehicleState: VehicleState = VehicleState(),
     val isToggling: Boolean = false,
+    val isSyncing: Boolean = false,
     val currentTab: String = "LUZES"
 )

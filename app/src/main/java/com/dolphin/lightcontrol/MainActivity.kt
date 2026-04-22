@@ -66,6 +66,7 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
     val discoveredDevices by viewModel.discoveredBluetoothDevices.collectAsState()
     val vehicleState = uiState.vehicleState
     val isToggling = uiState.isToggling
+    val isSyncing = uiState.isSyncing
 
     val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -84,7 +85,7 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
 
     Scaffold(
         containerColor = BgDeep,
-        topBar = { Header(vehicleState) },
+        topBar = { Header(vehicleState, isSyncing) { viewModel.syncWithCloud() } },
         bottomBar = { NavigationFooter(uiState.currentTab) { viewModel.selectTab(it) } }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -430,7 +431,7 @@ fun ControlSmall(label: String, icon: ImageVector, isActive: Boolean, isLoading:
 }
 
 @Composable
-fun Header(state: VehicleState) {
+fun Header(state: VehicleState, isSyncing: Boolean, onSyncClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -440,16 +441,29 @@ fun Header(state: VehicleState) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            "BYD DOLPHIN PLUS",
-            color = AccentBlue,
-            fontWeight = FontWeight.Bold,
-            fontSize = 20.sp,
-            letterSpacing = 4.sp
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            StatusText("22:15")
+        Column {
+            Text(
+                "BYD DOLPHIN PLUS",
+                color = AccentBlue,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                letterSpacing = 4.sp
+            )
+            if (state.cloudSyncStatus != null) {
+                Text(state.cloudSyncStatus, color = Color.Gray, fontSize = 10.sp)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
             StatusText("${state.targetTemperature}°C")
+            
+            IconButton(onClick = onSyncClick, enabled = !isSyncing) {
+                if (isSyncing) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AccentBlue, strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Default.Sync, "Sync Cloud", tint = if (state.cloudSyncStatus != null) AccentBlue else TextDim)
+                }
+            }
+
             StatusText("● API CONNECTED", AccentBlue)
         }
     }
