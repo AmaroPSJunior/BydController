@@ -1,6 +1,7 @@
 package com.dolphin.lightcontrol
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -8,19 +9,52 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class BYDViewModel : ViewModel() {
+class BYDViewModel(application: Application) : AndroidViewModel(application) {
     private val service = BYDService()
+    private val bluetoothService = BluetoothService(application)
     
     private val _uiState = MutableStateFlow(VehicleUIState())
     val uiState: StateFlow<VehicleUIState> = _uiState.asStateFlow()
 
+    val discoveredBluetoothDevices = bluetoothService.discoveredDevices
+
     init {
         refreshState()
+        updatePairedDevices()
     }
 
     private fun refreshState() {
         val currentState = service.getState()
         _uiState.update { it.copy(vehicleState = currentState) }
+    }
+
+    private fun updatePairedDevices() {
+        val paired = bluetoothService.getPairedDevices().map { it.name }
+        // Update service state if needed, here we just keep it simple
+    }
+
+    fun startBluetoothScan() {
+        bluetoothService.startScanning()
+    }
+
+    fun stopBluetoothScan() {
+        bluetoothService.stopScanning()
+    }
+
+    fun pairBluetooth(device: String, address: String? = null) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isToggling = true) }
+            if (address != null) {
+                bluetoothService.connectToDevice(address)
+            }
+            service.connectBluetooth(device)
+            refreshState()
+            _uiState.update { it.copy(isToggling = false) }
+        }
+    }
+
+    fun addNewVehicle(name: String) {
+        performAction { service.registerVehicle(name) }
     }
 
     fun toggleLights() {
@@ -61,14 +95,6 @@ class BYDViewModel : ViewModel() {
 
     fun toggleRearFog() {
         performAction { service.toggleRearFog() }
-    }
-
-    fun pairBluetooth(device: String) {
-        performAction { service.connectBluetooth(device) }
-    }
-
-    fun addNewVehicle(name: String) {
-        performAction { service.registerVehicle(name) }
     }
 
     fun selectTab(tab: String) {

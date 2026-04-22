@@ -4,6 +4,10 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -29,6 +33,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -57,8 +63,24 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun DolphinControlApp(viewModel: BYDViewModel) {
     val uiState by viewModel.uiState.collectAsState()
+    val discoveredDevices by viewModel.discoveredBluetoothDevices.collectAsState()
     val vehicleState = uiState.vehicleState
     val isToggling = uiState.isToggling
+
+    val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.ACCESS_FINE_LOCATION)
+    } else {
+        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val allGranted = permissions.entries.all { it.value }
+        if (allGranted) {
+            viewModel.startBluetoothScan()
+        }
+    }
 
     Scaffold(
         containerColor = BgDeep,
@@ -71,7 +93,9 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
                 "LUZES" -> LightsScreen(vehicleState, isToggling, viewModel)
                 "CLIMA" -> ClimateScreen(vehicleState, isToggling, viewModel)
                 "ENERGIA" -> EnergyScreen(vehicleState)
-                "AJUSTES" -> SettingsScreen(vehicleState, viewModel)
+                "AJUSTES" -> SettingsScreen(vehicleState, discoveredDevices, viewModel) {
+                    launcher.launch(permissionsToRequest)
+                }
             }
         }
     }
@@ -259,7 +283,7 @@ fun EnergyScreen(state: VehicleState) {
 }
 
 @Composable
-fun SettingsScreen(state: VehicleState, viewModel: BYDViewModel) {
+fun SettingsScreen(state: VehicleState, discoveredDevices: List<BluetoothDeviceInfo>, viewModel: BYDViewModel, onScanRequested: () -> Unit) {
     var showBluetoothDialog by remember { mutableStateOf(false) }
     var showVehicleDialog by remember { mutableStateOf(false) }
 
@@ -271,7 +295,10 @@ fun SettingsScreen(state: VehicleState, viewModel: BYDViewModel) {
             // Devices & Bluetooth
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("DISPOSITIVOS & CONEXÃO", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                SettingsItem("Bluetooth", state.bluetoothDevice ?: "Desconectado") { showBluetoothDialog = true }
+                SettingsItem("Bluetooth", state.bluetoothDevice ?: "Desconectado") { 
+                    onScanRequested()
+                    showBluetoothDialog = true 
+                }
                 SettingsItem("Visualizar Dispositivos Pareados", "Total: ${state.pairedDevices.size}") {}
             }
 
@@ -291,26 +318,51 @@ fun SettingsScreen(state: VehicleState, viewModel: BYDViewModel) {
 
     if (showBluetoothDialog) {
         AlertDialog(
-            onDismissRequest = { showBluetoothDialog = false },
+            onDismissRequest = { 
+                viewModel.stopBluetoothScan()
+                showBluetoothDialog = false 
+            },
             containerColor = BgCard,
-            title = { Text("Conectar Bluetooth", color = Color.White) },
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Conectar Bluetooth", color = Color.White)
+                    Spacer(modifier = Modifier.weight(1f))
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), color = AccentBlue, strokeWidth = 2.dp)
+                }
+            },
             text = {
-                Column {
-                    state.pairedDevices.forEach { device ->
+                Column(modifier = Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState())) {
+                    Text("Dispositivos Encontrados:", color = TextDim, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+                    
+                    if (discoveredDevices.isEmpty()) {
+                        Text("Buscando dispositivos próximos...", color = Color.Gray, modifier = Modifier.padding(vertical = 20.dp))
+                    }
+
+                    discoveredDevices.forEach { device ->
                         Row(
                             modifier = Modifier.fillMaxWidth().clickable { 
-                                viewModel.pairBluetooth(device)
+                                viewModel.pairBluetooth(device.name, device.address)
+                                viewModel.stopBluetoothScan()
                                 showBluetoothDialog = false
                             }.padding(vertical = 12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(device, color = if(state.bluetoothDevice == device) AccentBlue else Color.White)
-                            if(state.bluetoothDevice == device) Icon(Icons.Default.Check, null, tint = AccentBlue)
+                            Column {
+                                Text(device.name, color = if(state.bluetoothDevice == device.name) AccentBlue else Color.White)
+                                Text(device.address, color = Color.Gray, fontSize = 10.sp)
+                            }
+                            if(state.bluetoothDevice == device.name) Icon(Icons.Default.Check, null, tint = AccentBlue)
                         }
+                        HorizontalDivider(color = GridLine)
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { showBluetoothDialog = false }) { Text("CANCELAR", color = AccentBlue) } }
+            confirmButton = { 
+                TextButton(onClick = { 
+                    viewModel.stopBluetoothScan()
+                    showBluetoothDialog = false 
+                }) { Text("FECHAR", color = AccentBlue) } 
+            }
         )
     }
 
