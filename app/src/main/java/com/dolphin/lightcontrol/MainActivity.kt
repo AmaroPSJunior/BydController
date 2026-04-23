@@ -79,6 +79,7 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
     ) { permissions ->
         val allGranted = permissions.entries.all { it.value }
         if (allGranted) {
+            viewModel.updatePairedDevices()
             viewModel.startBluetoothScan()
         }
     }

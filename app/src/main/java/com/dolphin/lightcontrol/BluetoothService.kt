@@ -1,6 +1,7 @@
 package com.dolphin.lightcontrol
 
 import android.annotation.SuppressLint
+import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
@@ -8,6 +9,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -47,8 +51,17 @@ class BluetoothService(private val context: Context) {
         }
     }
 
+    private fun canScan(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            hasPermission(Manifest.permission.BLUETOOTH_SCAN)
+        } else {
+            hasPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+
     @SuppressLint("MissingPermission")
     fun startScanning() {
+        if (!canScan()) return
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) return
         
         _discoveredDevices.update { emptyList() }
@@ -60,6 +73,7 @@ class BluetoothService(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     fun stopScanning() {
+        if (!canScan()) return
         if (bluetoothAdapter?.isDiscovering == true) {
             bluetoothAdapter.cancelDiscovery()
         }
@@ -72,14 +86,31 @@ class BluetoothService(private val context: Context) {
 
     @SuppressLint("MissingPermission")
     fun connectToDevice(address: String): Boolean {
+        if (!canConnect()) return false
         val device = bluetoothAdapter?.getRemoteDevice(address)
         // Aqui seria a lógica real de conexão GATT ou Socket
         // Para o MVP, simulamos o pareamento de sucesso
         return device != null
     }
 
+    private fun hasPermission(permission: String): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            permission
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun canConnect(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            hasPermission(Manifest.permission.BLUETOOTH_CONNECT)
+        } else {
+            true
+        }
+    }
+
     @SuppressLint("MissingPermission")
     fun getPairedDevices(): List<BluetoothDeviceInfo> {
+        if (!canConnect()) return emptyList()
         return bluetoothAdapter?.bondedDevices?.map { 
             BluetoothDeviceInfo(it.name ?: "Unknown", it.address)
         } ?: emptyList()

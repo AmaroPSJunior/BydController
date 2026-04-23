@@ -28,9 +28,12 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(vehicleState = currentState) }
     }
 
-    private fun updatePairedDevices() {
-        val paired = bluetoothService.getPairedDevices().map { it.name }
-        // Update service state if needed, here we just keep it simple
+    fun updatePairedDevices() {
+        viewModelScope.launch {
+            val paired = bluetoothService.getPairedDevices().map { it.name }
+            service.updatePairedDevices(paired)
+            refreshState()
+        }
     }
 
     fun startBluetoothScan() {

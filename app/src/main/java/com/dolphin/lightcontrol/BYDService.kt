@@ -106,5 +106,9 @@ class BYDService {
         state = state.copy(cloudSyncStatus = status)
     }
 
+    suspend fun updatePairedDevices(devices: List<String>) {
+        state = state.copy(pairedDevices = devices)
+    }
+
     fun getState(): VehicleState = state
 }
