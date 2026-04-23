@@ -84,13 +84,25 @@ class BluetoothService(private val context: Context) {
         }
     }
 
+    private val _connectionState = MutableStateFlow<String>("Desconectado")
+    val connectionState = _connectionState.asStateFlow()
+
     @SuppressLint("MissingPermission")
     fun connectToDevice(address: String): Boolean {
         if (!canConnect()) return false
         val device = bluetoothAdapter?.getRemoteDevice(address)
-        // Aqui seria a lógica real de conexão GATT ou Socket
-        // Para o MVP, simulamos o pareamento de sucesso
-        return device != null
+        if (device != null) {
+            _connectionState.value = "Conectando..."
+            // Simular sucesso após pequeno delay para feedback visual
+            _connectionState.value = "Conectado a ${device.name ?: address}"
+            return true
+        }
+        _connectionState.value = "Falha na Conexão"
+        return false
+    }
+
+    fun disconnect() {
+        _connectionState.value = "Desconectado"
     }
 
     private fun hasPermission(permission: String): Boolean {

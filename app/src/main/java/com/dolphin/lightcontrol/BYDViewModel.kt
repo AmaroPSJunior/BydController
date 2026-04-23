@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 class BYDViewModel(application: Application) : AndroidViewModel(application) {
     private val service = BYDService()
     private val bluetoothService = BluetoothService(application)
+    private val wifiService = WifiService(application)
     
     private val _uiState = MutableStateFlow(VehicleUIState())
     val uiState: StateFlow<VehicleUIState> = _uiState.asStateFlow()
@@ -21,6 +22,23 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
     init {
         refreshState()
         updatePairedDevices()
+        updateWifiStatus()
+        
+        viewModelScope.launch {
+            bluetoothService.connectionState.collect { status ->
+                _uiState.update { it.copy(bluetoothStatus = status) }
+                service.connectBluetooth(status)
+                refreshState()
+            }
+        }
+        
+        viewModelScope.launch {
+            wifiService.wifiState.collect { status ->
+                _uiState.update { it.copy(wifiStatus = status) }
+                service.updateWifiStatus(status)
+                refreshState()
+            }
+        }
     }
 
     private fun refreshState() {
@@ -29,6 +47,10 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
             vehicleState = currentState,
             cloudSyncStatus = currentState.cloudSyncStatus
         ) }
+    }
+
+    fun updateWifiStatus() {
+        wifiService.updateWifiStatus()
     }
 
     fun updatePairedDevices() {
@@ -165,5 +187,7 @@ data class VehicleUIState(
     val isToggling: Boolean = false,
     val isSyncing: Boolean = false,
     val currentTab: String = "LUZES",
-    val cloudSyncStatus: String? = null
+    val cloudSyncStatus: String? = null,
+    val wifiStatus: String = "Desconectado",
+    val bluetoothStatus: String = "Desconectado"
 )

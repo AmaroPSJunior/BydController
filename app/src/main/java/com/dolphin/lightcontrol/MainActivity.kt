@@ -96,7 +96,7 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
                 "LUZES" -> LightsScreen(vehicleState, isToggling, viewModel)
                 "CLIMA" -> ClimateScreen(vehicleState, isToggling, viewModel)
                 "ENERGIA" -> EnergyScreen(vehicleState)
-                "AJUSTES" -> SettingsScreen(vehicleState, discoveredDevices, viewModel) {
+                "AJUSTES" -> SettingsScreen(uiState, discoveredDevices, viewModel) {
                     launcher.launch(permissionsToRequest)
                 }
             }
@@ -286,7 +286,8 @@ fun EnergyScreen(state: VehicleState) {
 }
 
 @Composable
-fun SettingsScreen(state: VehicleState, discoveredDevices: List<BluetoothDeviceInfo>, viewModel: BYDViewModel, onScanRequested: () -> Unit) {
+fun SettingsScreen(uiState: VehicleUIState, discoveredDevices: List<BluetoothDeviceInfo>, viewModel: BYDViewModel, onScanRequested: () -> Unit) {
+    val state = uiState.vehicleState
     var showBluetoothDialog by remember { mutableStateOf(false) }
     var showVehicleDialog by remember { mutableStateOf(false) }
     var showCloudDialog by remember { mutableStateOf(false) }
@@ -296,11 +297,14 @@ fun SettingsScreen(state: VehicleState, discoveredDevices: List<BluetoothDeviceI
         Spacer(modifier = Modifier.height(24.dp))
         
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            // Devices & Bluetooth
+            // Devices & Connection
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("DISPOSITIVOS & CONEXÃO", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                SettingsItem("Wi-Fi", uiState.wifiStatus) { 
+                    viewModel.updateWifiStatus()
+                }
                 SettingsItem("Cloud BYD", state.cloudSyncStatus ?: "Desconectado") { showCloudDialog = true }
-                SettingsItem("Bluetooth", state.bluetoothDevice ?: "Desconectado") { 
+                SettingsItem("Bluetooth", uiState.bluetoothStatus) { 
                     onScanRequested()
                     showBluetoothDialog = true 
                 }
@@ -511,8 +515,11 @@ fun Header(state: VehicleState, isSyncing: Boolean, onSyncClick: () -> Unit) {
                 Text(state.cloudSyncStatus, color = Color.Gray, fontSize = 10.sp)
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-            StatusText("${state.targetTemperature}°C")
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(horizontalAlignment = Alignment.End) {
+                 StatusText(state.targetTemperature.toString() + "°C")
+                 Text(uiState.wifiStatus, color = if(uiState.wifiStatus.startsWith("Conectado")) AccentBlue else Color.Gray, fontSize = 8.sp)
+            }
             
             IconButton(onClick = onSyncClick, enabled = !isSyncing) {
                 if (isSyncing) {

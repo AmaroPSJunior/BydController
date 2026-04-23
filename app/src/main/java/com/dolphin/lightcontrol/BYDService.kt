@@ -26,7 +26,9 @@ data class VehicleState(
     val bluetoothDevice: String? = "iPhone de Arcamos",
     val pairedDevices: List<String> = listOf("iPhone de Arcamos", "Samsung S23", "Central BYD"),
     val registeredVehicles: List<String> = listOf("BYD Dolphin Plus", "BYD Seal"),
-    val cloudSyncStatus: String? = null
+    val cloudSyncStatus: String? = null,
+    val isWifiConnected: Boolean = false,
+    val bluetoothStatus: String = "Desconectado"
 )
 
 class BYDService {
@@ -99,6 +101,12 @@ class BYDService {
         val vin = currentVin
         if (token != null && vin != null) {
             api.sendCommand(token, vin, CommandRequest(cmd, value))
+        } else if (state.bluetoothStatus.startsWith("Conectado")) {
+            // Mock local Bluetooth command
+            println("Sending command via Bluetooth: $cmd")
+        } else if (state.isWifiConnected) {
+            // Mock local Wi-Fi command
+            println("Sending command via Wi-Fi: $cmd")
         }
     }
 
@@ -161,8 +169,12 @@ class BYDService {
         state = state.copy(rearFogOn = !state.rearFogOn)
     }
 
-    suspend fun connectBluetooth(deviceName: String) {
-        state = state.copy(bluetoothDevice = deviceName)
+    suspend fun connectBluetooth(status: String) {
+        state = state.copy(bluetoothStatus = status)
+    }
+
+    suspend fun updateWifiStatus(status: String) {
+        state = state.copy(isWifiConnected = status.startsWith("Conectado"))
     }
 
     suspend fun registerVehicle(name: String) {
@@ -177,5 +189,13 @@ class BYDService {
         state = state.copy(pairedDevices = devices)
     }
 
-    fun getState(): VehicleState = state
+    fun getState(): VehicleState {
+        // Simular consumo/recuperação leve se não estiver sincronizado com nuvem oficial
+        if (authToken == null) {
+            val drift = (Math.random() * 2 - 1).toInt() // -1, 0 ou 1
+            val newRange = (state.estimatedRange + drift).coerceIn(100, 500)
+            state = state.copy(estimatedRange = newRange)
+        }
+        return state
+    }
 }
