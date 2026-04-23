@@ -45,7 +45,7 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
         val currentState = service.getState()
         _uiState.update { it.copy(
             vehicleState = currentState,
-            cloudSyncStatus = currentState.cloudSyncStatus
+            uiStatus = currentState.cloudSyncStatus
         ) }
     }
 
@@ -63,13 +63,13 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
 
     fun login(user: String, pass: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(cloudSyncStatus = "Sincronizando...") }
+            _uiState.update { it.copy(uiStatus = "Sincronizando...") }
             val success = service.login(user, pass)
             if (success) {
-                _uiState.update { it.copy(cloudSyncStatus = "Conectado ao Cloud") }
+                _uiState.update { it.copy(uiStatus = "Conectado ao Cloud") }
                 refreshState()
             } else {
-                _uiState.update { it.copy(cloudSyncStatus = "Erro na autenticação") }
+                _uiState.update { it.copy(uiStatus = "Erro na autenticação") }
             }
         }
     }
@@ -145,7 +145,7 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
     fun syncWithCloud() {
         val apiKey = System.getenv("GEMINI_API_KEY") ?: ""
         if (apiKey.isBlank()) {
-            _uiState.update { it.copy(cloudSyncStatus = "Error: API Key Missing") }
+            _uiState.update { it.copy(uiStatus = "Error: API Key Missing") }
             return
         }
 
@@ -158,7 +158,7 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
                 service.updateCloudSyncStatus(result)
                 refreshState()
             } catch (e: Exception) {
-                service.updateCloudSyncStatus("Error: ${e.message}")
+                _uiState.update { it.copy(uiStatus = "Error: ${e.message}") }
                 refreshState()
             } finally {
                 _uiState.update { it.copy(isSyncing = false) }
@@ -187,7 +187,7 @@ data class VehicleUIState(
     val isToggling: Boolean = false,
     val isSyncing: Boolean = false,
     val currentTab: String = "LUZES",
-    val cloudSyncStatus: String? = null,
+    val uiStatus: String? = null,
     val wifiStatus: String = "Desconectado",
     val bluetoothStatus: String = "Desconectado"
 )
