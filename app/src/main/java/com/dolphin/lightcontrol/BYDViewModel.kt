@@ -25,7 +25,10 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun refreshState() {
         val currentState = service.getState()
-        _uiState.update { it.copy(vehicleState = currentState) }
+        _uiState.update { it.copy(
+            vehicleState = currentState,
+            cloudSyncStatus = currentState.cloudSyncStatus
+        ) }
     }
 
     fun updatePairedDevices() {
@@ -120,7 +123,7 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
     fun syncWithCloud() {
         val apiKey = System.getenv("GEMINI_API_KEY") ?: ""
         if (apiKey.isBlank()) {
-            _uiState.update { it.copy(vehicleState = it.vehicleState.copy(cloudSyncStatus = "Error: API Key Missing")) }
+            _uiState.update { it.copy(cloudSyncStatus = "Error: API Key Missing") }
             return
         }
 
@@ -161,5 +164,6 @@ data class VehicleUIState(
     val vehicleState: VehicleState = VehicleState(),
     val isToggling: Boolean = false,
     val isSyncing: Boolean = false,
-    val currentTab: String = "LUZES"
+    val currentTab: String = "LUZES",
+    val cloudSyncStatus: String? = null
 )
