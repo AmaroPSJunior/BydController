@@ -36,6 +36,19 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    fun login(user: String, pass: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(cloudSyncStatus = "Sincronizando...") }
+            val success = service.login(user, pass)
+            if (success) {
+                _uiState.update { it.copy(cloudSyncStatus = "Conectado ao Cloud") }
+                refreshState()
+            } else {
+                _uiState.update { it.copy(cloudSyncStatus = "Erro na autenticação") }
+            }
+        }
+    }
+
     fun startBluetoothScan() {
         bluetoothService.startScanning()
     }

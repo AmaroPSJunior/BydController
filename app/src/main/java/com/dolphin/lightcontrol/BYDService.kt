@@ -1,5 +1,7 @@
 package com.dolphin.lightcontrol
 
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import java.util.Date
 
 data class VehicleState(
@@ -28,21 +30,86 @@ data class VehicleState(
 )
 
 class BYDService {
+    private val retrofit = Retrofit.Builder()
+        .baseUrl("https://api-sg.byd.com/")
+        .addConverterFactory(GsonConverterFactory.create())
+        .build()
+
+    private val api = retrofit.create(BYDApi::class.java)
+    
+    private var authToken: String? = null
+    private var currentVin: String? = null
     private var state = VehicleState()
     
+    suspend fun login(user: String, pass: String): Boolean {
+        return try {
+            val response = api.login(LoginRequest(user, pass))
+            if (response.isSuccessful) {
+                authToken = "Bearer ${response.body()?.access_token}"
+                fetchVehicles()
+                true
+            } else false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private suspend fun fetchVehicles() {
+        authToken?.let { token ->
+            val response = api.getVehicles(token)
+            if (response.isSuccessful) {
+                val vehicles = response.body()
+                currentVin = vehicles?.firstOrNull()?.vin
+                state = state.copy(
+                    carName = vehicles?.firstOrNull()?.name ?: "Meu BYD",
+                    registeredVehicles = vehicles?.map { it.name } ?: emptyList()
+                )
+            }
+        }
+    }
+
     suspend fun fetchData(): VehicleState {
-        kotlinx.coroutines.delay(800)
+        val token = authToken
+        val vin = currentVin
+        if (token != null && vin != null) {
+            try {
+                val response = api.getVehicleState(token, vin)
+                if (response.isSuccessful) {
+                    val cloudState = response.body()
+                    cloudState?.let {
+                        state = state.copy(
+                            batteryLevel = it.soc,
+                            estimatedRange = it.range,
+                            isLocked = it.is_locked,
+                            airConditioningOn = it.ac_on,
+                            targetTemperature = it.target_temp,
+                            lastSync = Date(it.last_update)
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                // Manter estado local se falhar
+            }
+        }
         return state
     }
 
+    private suspend fun sendCommand(cmd: String, value: Any? = null) {
+        val token = authToken
+        val vin = currentVin
+        if (token != null && vin != null) {
+            api.sendCommand(token, vin, CommandRequest(cmd, value))
+        }
+    }
+
     suspend fun toggleInternalLights(): Boolean {
-        kotlinx.coroutines.delay(400)
+        sendCommand("LIGHTS_INTERNAL_TOGGLE")
         state = state.copy(internalLights = !state.internalLights)
         return state.internalLights
     }
 
     suspend fun updateLightZone(zone: String, value: Boolean) {
-        kotlinx.coroutines.delay(200)
+        sendCommand("LIGHTS_ZONE_UPDATE", mapOf("zone" to zone, "state" to value))
         state = when(zone) {
             "front" -> state.copy(frontLights = value)
             "rear" -> state.copy(rearLightsZone = value)
@@ -53,52 +120,52 @@ class BYDService {
     }
 
     suspend fun toggleLock(): Boolean {
-        kotlinx.coroutines.delay(500)
+        sendCommand(if (state.isLocked) "UNLOCK" else "LOCK")
         state = state.copy(isLocked = !state.isLocked)
         return state.isLocked
     }
 
     suspend fun toggleAC(): Boolean {
-        kotlinx.coroutines.delay(600)
+        sendCommand(if (state.airConditioningOn) "AC_OFF" else "AC_ON")
         state = state.copy(airConditioningOn = !state.airConditioningOn)
         return state.airConditioningOn
     }
 
     suspend fun setTemperature(temp: Int) {
-        kotlinx.coroutines.delay(100)
+        sendCommand("SET_TEMP", temp)
         state = state.copy(targetTemperature = temp)
     }
 
     suspend fun setFanSpeed(speed: Int) {
-        kotlinx.coroutines.delay(100)
+        sendCommand("SET_FAN_SPEED", speed)
         state = state.copy(fanSpeed = speed)
     }
 
     suspend fun toggleRecirculation() {
-        kotlinx.coroutines.delay(200)
+        sendCommand("RECIRCULATION_TOGGLE")
         state = state.copy(recirculation = !state.recirculation)
     }
 
     suspend fun toggleDefrost() {
-        kotlinx.coroutines.delay(200)
+        sendCommand("DEFROST_TOGGLE")
         state = state.copy(defrost = !state.defrost)
     }
 
     suspend fun toggleAutoHeadlights() {
+        sendCommand("AUTO_HEADLIGHTS_TOGGLE")
         state = state.copy(autoHeadlightsOn = !state.autoHeadlightsOn)
     }
 
     suspend fun toggleRearFog() {
+        sendCommand("REAR_FOG_TOGGLE")
         state = state.copy(rearFogOn = !state.rearFogOn)
     }
 
     suspend fun connectBluetooth(deviceName: String) {
-        kotlinx.coroutines.delay(2000)
         state = state.copy(bluetoothDevice = deviceName)
     }
 
     suspend fun registerVehicle(name: String) {
-        kotlinx.coroutines.delay(1000)
         state = state.copy(registeredVehicles = state.registeredVehicles + name)
     }
 

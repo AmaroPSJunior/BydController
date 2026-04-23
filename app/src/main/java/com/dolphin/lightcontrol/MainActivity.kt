@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import kotlinx.coroutines.launch
 
 // Theme Colors (Geometric Balance)
@@ -288,6 +289,7 @@ fun EnergyScreen(state: VehicleState) {
 fun SettingsScreen(state: VehicleState, discoveredDevices: List<BluetoothDeviceInfo>, viewModel: BYDViewModel, onScanRequested: () -> Unit) {
     var showBluetoothDialog by remember { mutableStateOf(false) }
     var showVehicleDialog by remember { mutableStateOf(false) }
+    var showCloudDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().padding(40.dp)) {
         Text("CONFIGURAÇÕES DO SISTEMA", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -297,6 +299,7 @@ fun SettingsScreen(state: VehicleState, discoveredDevices: List<BluetoothDeviceI
             // Devices & Bluetooth
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("DISPOSITIVOS & CONEXÃO", color = TextDim, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                SettingsItem("Cloud BYD", state.cloudSyncStatus ?: "Desconectado") { showCloudDialog = true }
                 SettingsItem("Bluetooth", state.bluetoothDevice ?: "Desconectado") { 
                     onScanRequested()
                     showBluetoothDialog = true 
@@ -364,6 +367,60 @@ fun SettingsScreen(state: VehicleState, discoveredDevices: List<BluetoothDeviceI
                     viewModel.stopBluetoothScan()
                     showBluetoothDialog = false 
                 }) { Text("FECHAR", color = AccentBlue) } 
+            }
+        )
+    }
+
+    if (showCloudDialog) {
+        var email by remember { mutableStateOf("") }
+        var password by remember { mutableStateOf("") }
+        
+        AlertDialog(
+            onDismissRequest = { showCloudDialog = false },
+            containerColor = BgCard,
+            title = { Text("Login Cloud BYD", color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text("Conecte sua conta oficial BYD para habilitar controle em tempo real.", color = TextDim, fontSize = 12.sp)
+                    
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = { email = it },
+                        label = { Text("E-mail ou Usuário") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = AccentBlue,
+                            unfocusedBorderColor = GridLine
+                        )
+                    )
+                    
+                    OutlinedTextField(
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text("Senha") },
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = AccentBlue,
+                            unfocusedBorderColor = GridLine
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (email.isNotBlank() && password.isNotBlank()) {
+                        viewModel.login(email, password)
+                        showCloudDialog = false
+                    }
+                }) { Text("CONECTAR", color = AccentBlue) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCloudDialog = false }) { Text("CANCELAR", color = Color.Gray) }
             }
         )
     }
