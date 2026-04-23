@@ -303,7 +303,7 @@ fun SettingsScreen(uiState: VehicleUIState, discoveredDevices: List<BluetoothDev
                 SettingsItem("Wi-Fi", uiState.wifiStatus) { 
                     viewModel.updateWifiStatus()
                 }
-                SettingsItem("Cloud BYD", state.cloudSyncStatus ?: "Desconectado") { showCloudDialog = true }
+                SettingsItem("Cloud BYD", uiState.uiStatus ?: "Desconectado") { showCloudDialog = true }
                 SettingsItem("Bluetooth", uiState.bluetoothStatus) { 
                     onScanRequested()
                     showBluetoothDialog = true 
@@ -511,8 +511,8 @@ fun Header(state: VehicleState, isSyncing: Boolean, onSyncClick: () -> Unit) {
                 fontSize = 20.sp,
                 letterSpacing = 4.sp
             )
-            if (state.cloudSyncStatus != null) {
-                Text(state.cloudSyncStatus, color = Color.Gray, fontSize = 10.sp)
+            if (uiState.uiStatus != null) {
+                Text(uiState.uiStatus, color = Color.Gray, fontSize = 10.sp)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -525,7 +525,7 @@ fun Header(state: VehicleState, isSyncing: Boolean, onSyncClick: () -> Unit) {
                 if (isSyncing) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AccentBlue, strokeWidth = 2.dp)
                 } else {
-                    Icon(Icons.Default.Sync, "Sync Cloud", tint = if (state.cloudSyncStatus != null) AccentBlue else TextDim)
+                    Icon(Icons.Default.Sync, "Sync Cloud", tint = if (uiState.uiStatus != null) AccentBlue else TextDim)
                 }
             }
 
