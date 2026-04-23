@@ -39,12 +39,14 @@ async function sync() {
   console.log(`Using branch: ${branch}`);
 
   // 2. Get latest commit
+  console.log(`Checking ref: heads/${branch}`);
   const { data: refData } = await octokit.git.getRef({
     owner,
     repo,
     ref: `heads/${branch}`,
   });
   const parentCommitSha = refData.object.sha;
+  console.log(`Parent Commit SHA from ref: ${parentCommitSha}`);
   
   const { data: commitData } = await octokit.git.getCommit({
     owner,
@@ -52,6 +54,7 @@ async function sync() {
     commit_sha: parentCommitSha,
   });
   const baseTree = commitData.tree.sha;
+  console.log(`Base Tree SHA from commit: ${baseTree}`);
 
   console.log(`Uploading ${files.length} files...`);
 
@@ -84,6 +87,7 @@ async function sync() {
   });
 
   // 5. Create commit
+  console.log(`Creating commit with Tree: ${newTree.sha} and Parent: ${parentCommitSha}`);
   const { data: newCommit } = await octokit.git.createCommit({
     owner,
     repo,
@@ -91,13 +95,16 @@ async function sync() {
     tree: newTree.sha,
     parents: [parentCommitSha],
   });
+  console.log(`New Commit SHA: ${newCommit.sha}`);
 
   // 6. Update ref
+  console.log(`Updating ref heads/${branch} to ${newCommit.sha}`);
   await octokit.git.updateRef({
     owner,
     repo,
     ref: `heads/${branch}`,
     sha: newCommit.sha,
+    force: true,
   });
 
   console.log("Success! Files synced via API.");
