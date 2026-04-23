@@ -20,9 +20,13 @@ class BYDViewModel(application: Application) : AndroidViewModel(application) {
     val discoveredBluetoothDevices = bluetoothService.discoveredDevices
 
     init {
-        refreshState()
-        updatePairedDevices()
-        updateWifiStatus()
+        try {
+            refreshState()
+            updatePairedDevices()
+            updateWifiStatus()
+        } catch (e: Exception) {
+            // Silently fail, state will be refreshed later as permissions are granted
+        }
         
         viewModelScope.launch {
             bluetoothService.connectionState.collect { status ->
