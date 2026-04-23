@@ -87,7 +87,7 @@ fun DolphinControlApp(viewModel: BYDViewModel) {
 
     Scaffold(
         containerColor = BgDeep,
-        topBar = { Header(vehicleState, isSyncing) { viewModel.syncWithCloud() } },
+        topBar = { Header(vehicleState, uiState.uiStatus, uiState.wifiStatus, isSyncing) { viewModel.syncWithCloud() } },
         bottomBar = { NavigationFooter(uiState.currentTab) { viewModel.selectTab(it) } }
     ) { padding ->
         Box(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -493,7 +493,7 @@ fun ControlSmall(label: String, icon: ImageVector, isActive: Boolean, isLoading:
 }
 
 @Composable
-fun Header(state: VehicleState, isSyncing: Boolean, onSyncClick: () -> Unit) {
+fun Header(state: VehicleState, uiStatus: String?, wifiStatus: String, isSyncing: Boolean, onSyncClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -511,21 +511,21 @@ fun Header(state: VehicleState, isSyncing: Boolean, onSyncClick: () -> Unit) {
                 fontSize = 20.sp,
                 letterSpacing = 4.sp
             )
-            if (uiState.uiStatus != null) {
-                Text(uiState.uiStatus, color = Color.Gray, fontSize = 10.sp)
+            if (uiStatus != null) {
+                Text(uiStatus, color = Color.Gray, fontSize = 10.sp)
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(horizontalAlignment = Alignment.End) {
                  StatusText(state.targetTemperature.toString() + "°C")
-                 Text(uiState.wifiStatus, color = if(uiState.wifiStatus.startsWith("Conectado")) AccentBlue else Color.Gray, fontSize = 8.sp)
+                 Text(wifiStatus, color = if(wifiStatus.startsWith("Conectado")) AccentBlue else Color.Gray, fontSize = 8.sp)
             }
             
             IconButton(onClick = onSyncClick, enabled = !isSyncing) {
                 if (isSyncing) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), color = AccentBlue, strokeWidth = 2.dp)
                 } else {
-                    Icon(Icons.Default.Sync, "Sync Cloud", tint = if (uiState.uiStatus != null) AccentBlue else TextDim)
+                    Icon(Icons.Default.Sync, "Sync Cloud", tint = if (uiStatus != null) AccentBlue else TextDim)
                 }
             }
 
